@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今天吃什么</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #1A0A0A;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Sans SC', sans-serif;
+      overflow: hidden;
+    }
+
+    .title {
+      font-family: 'Ma Shan Zheng', serif;
+      font-size: 3rem;
+      color: #FFD700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      margin-bottom: 2rem;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+    }
+
+    .wheel-border {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 8px solid #D4AF37;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5), inset 0 0 20px rgba(212, 175, 55, 0.3);
+    }
+
+    #wheelCanvas {
+      display: block;
+    }
+
+    .center-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #C41E3A, #8B0000);
+      border: 4px solid #D4AF37;
+      border-radius: 50%;
+      color: #FFD700;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .center-btn:hover:not(:disabled) {
+      transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    .center-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
+    .result-banner {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #C41E3A, #8B0000);
+      border: 3px solid #D4AF37;
+      border-radius: 12px;
+      padding: 1rem 2rem;
+      color: #FFD700;
+      font-size: 1.5rem;
+      font-weight: bold;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+      transition: bottom 0.4s ease-out;
+      white-space: nowrap;
+    }
+
+    .result-banner.show {
+      bottom: 30px;
+    }
+
+    .result-banner .emoji {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="title">今天吃什么</h1>
+
+  <div class="wheel-container">
+    <div class="wheel-border"></div>
+    <canvas id="wheelCanvas" width="400" height="400"></canvas>
+    <button class="center-btn" id="spinBtn">开始</button>
+  </div>
+
+  <div class="result-banner" id="resultBanner">
+    <span class="emoji">🍜</span>
+    <span id="resultText"></span>
+  </div>
+
+  <script>
+    const categories = ['川湘菜', '粤菜', '面食', '快餐', '烧烤', '炸串', '寿司'];
+    const colors = ['#C41E3A', '#8B0000', '#C41E3A', '#8B0000', '#C41E3A', '#8B0000', '#C41E3A'];
+    const emojis = ['🌶️', '🥘', '🍜', '🍔', '🥓', '🍢', '🍣'];
+
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const spinBtn = document.getElementById('spinBtn');
+    const resultBanner = document.getElementById('resultBanner');
+    const resultText = document.getElementById('resultText');
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 180;
+    const segmentAngle = (2 * Math.PI) / categories.length;
+
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < categories.length; i++) {
+        const startAngle = i * segmentAngle - Math.PI / 2 + currentRotation;
+        const endAngle = startAngle + segmentAngle;
+
+        // 绘制扇形
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+
+        // 绘制金色边框
+        ctx.strokeStyle = '#D4AF37';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 绘制文字
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + segmentAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 16px "Noto Sans SC", sans-serif';
+        ctx.fillText(categories[i], radius - 20, 5);
+        ctx.restore();
+      }
+
+      // 绘制中心装饰圆
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 50, 0, 2 * Math.PI);
+      ctx.fillStyle = '#1A0A0A';
+      ctx.fill();
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+      spinBtn.textContent = '抽奖中...';
+      resultBanner.classList.remove('show');
+
+      // 随机选择结果
+      const selectedIndex = Math.floor(Math.random() * categories.length);
+
+      // 计算目标角度
+      // 指针在顶部(0度位置)，我们需要让选中项停在顶部
+      const targetAngle = (2 * Math.PI - selectedIndex * segmentAngle - segmentAngle / 2) % (2 * Math.PI);
+
+      // 计算需要旋转的圈数(3-5圈)
+      const spins = 3 + Math.random() * 2;
+      const totalRotation = spins * 2 * Math.PI + targetAngle;
+
+      // 阻尼参数
+      const duration = 4000; // 总时长4秒
+      const startTime = performance.now();
+      const startRotation = currentRotation;
+
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // ease-out 缓动
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        currentRotation = startRotation + totalRotation * easeOut;
+
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // 动画完成
+          currentRotation = (startRotation + totalRotation) % (2 * Math.PI);
+          drawWheel();
+          showResult(selectedIndex);
+          isSpinning = false;
+          spinBtn.disabled = false;
+          spinBtn.textContent = '再来一次';
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showResult(index) {
+      resultText.textContent = `今日推荐：${categories[index]}`;
+      resultBanner.querySelector('.emoji').textContent = emojis[index];
+      resultBanner.classList.add('show');
+
+      // 3秒后隐藏
+      setTimeout(() => {
+        resultBanner.classList.remove('show');
+      }, 3000);
+    }
+
+    spinBtn.addEventListener('click', spin);
+
+    // 初始绘制
+    drawWheel();
+  </script>
+</body>
+</html>
